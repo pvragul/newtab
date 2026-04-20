@@ -1,0 +1,8 @@
+export { default as AppLogo } from './icon_newtab';
+export { default as CloseIcon } from './close_icon';
+export { default as SettingsIcon } from './settings_icon';
+export { default as AddIcon } from './add_icon';
+export { default as RearrangeIcon } from './rearrange_icon';
+export { default as UninstallIcon } from './uninstall';
+export { default as RemoveIcon } from './remove';
+export { default as InformationIcon } from './information';
