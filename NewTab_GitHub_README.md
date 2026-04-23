@@ -87,11 +87,10 @@ All from one interface.
 - Enforces behavioral consistency
 
 ## 🖼️ Visual Preview
-
-> _(Add screenshots here for maximum impact)_
-
-![Home Screen](./assets/home.png) ![Focus Mode](./assets/focus.png)
-![Minimal UI](./assets/minimal.png)
+### Home Screen UI
+![Home Screen](./src/assets/screenshots/Home_Screen.jpg)
+### All Apps UI
+![All Apps](./src/assets/screenshots/All_Apps.jpg)
 
 ## 🧬 Philosophy
 
@@ -127,19 +126,19 @@ D --> F[User Refocuses]
 
 ## 🔐 Permissions
 
-Permission Why
-
-Device Admin Screen lock
-Battery Optimization Ignore Keep launcher active
-Usage Access Behavior-aware focus system
+| Permission | Why |
+| --- | --- |
+| Device Admin | Screen lock |
+| Battery Optimization Ignore | Keep launcher active |
+| Usage Access | Behavior-aware focus system |
 
 ## ⚙️ Setup
 
 ```bash
-git clone <your-repo-url>
-cd NewTab
+git clone https://github.com/pvragul/newtab.git
+cd newtab
 npm install
-npm run android
+npx react-native run-android
 ```
 
 > Android only (deep system integration required)

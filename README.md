@@ -44,8 +44,8 @@ Since this application heavily integrates with custom Android Native Modules, it
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
-   cd NewTab
+   git clone https://github.com/pvragul/newtab.git
+   cd newtab
    ```
 
 2. **Install Dependencies:**
@@ -55,7 +55,7 @@ Since this application heavily integrates with custom Android Native Modules, it
 
 3. **Run on Android Emulator or Device:**
    ```bash
-   npm run android
+   npx react-native run-android
    ```
    *Note: Ensure you have an Android device connected or an emulator running.*
 
@@ -68,3 +68,9 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 ## 📄 License
 This project is licensed under the MIT License.
+
+## 💬 Final Thought
+This app is a work in progress. Any suggestions are welcome.
+
+## App apk for testing
+[NewTab.apk](https://drive.google.com/file/d/1Em94cJm1n6VXwuH_mOZ-LXSHJNrbFpqM/view?usp=drive_link&export=download)
