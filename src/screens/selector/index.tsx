@@ -1,12 +1,8 @@
 import {
-  Animated,
   BackHandler,
-  Button,
   FlatList,
-  Image,
   NativeModules,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from 'react-native';
@@ -16,7 +12,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IAppDetail } from '../../interface';
 import AppRow from '../../components/appRow';
 import Store from '../../store';
-import { useCustomNavigation } from '../../../navigation';
+import {
+  RootStackParamList,
+  useCustomNavigation,
+  useCustomRoute,
+} from '../../../navigation';
 import CustomSlideModal from '../../components/customSlideModal';
 const { LauncherApps } = NativeModules;
 
@@ -24,6 +24,7 @@ const AppSelector = () => {
   const { theme } = useTheme();
   const styles = styleSheet(theme);
   const navigation = useCustomNavigation();
+  const route = useCustomRoute();
   const [launchableApps, setlaunchableApps] = useState<IAppDetail[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openHasChangesModal, setOpenHasChangesModal] =
@@ -31,8 +32,10 @@ const AppSelector = () => {
 
   const initialSelectedRef = useRef<Set<string>>(new Set());
   const loadSelectedPkgs = async (): Promise<Set<string>> => {
-    const data = await Store.get<IAppDetail[]>(Store.KEY);
-    const initial = Array.isArray(data) ? new Set(data.map(item => item.packageName)) : new Set<string>();
+    const data = await Store.get<IAppDetail[]>(Store.KEY, []);
+    const initial = Array.isArray(data)
+      ? new Set(data.map(item => item.packageName))
+      : new Set<string>();
     initialSelectedRef.current = new Set(initial);
     return new Set(initial);
   };
@@ -41,7 +44,13 @@ const AppSelector = () => {
       const selectedList = await loadSelectedPkgs();
       setSelected(selectedList);
       const appsList = await LauncherApps.getLaunchableApps();
-      setlaunchableApps(appsList);
+      const uniqueApps = appsList.filter(
+        (app: IAppDetail, index: number) =>
+          appsList.findIndex(
+            (item: IAppDetail) => item.packageName === app.packageName,
+          ) === index,
+      );
+      setlaunchableApps(uniqueApps);
     };
     loadAppsList();
   }, []);
@@ -71,19 +80,20 @@ const AppSelector = () => {
   const toggleApp = useCallback((appDetail: IAppDetail) => {
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(appDetail.packageName) ? next.delete(appDetail.packageName) : next.add(appDetail.packageName);
+      next.has(appDetail.packageName)
+        ? next.delete(appDetail.packageName)
+        : next.add(appDetail.packageName);
       return next;
     });
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: IAppDetail }) => {
-      // console.log(item);
+    (props: { item: IAppDetail }) => {
       return (
         <AppRow
-          app={item}
-          selected={selected.has(item.packageName)}
-          onToggle={() => toggleApp(item)}
+          app={props.item}
+          selected={selected.has(props.item.packageName)}
+          onToggle={() => toggleApp(props.item)}
         />
       );
     },
@@ -92,9 +102,10 @@ const AppSelector = () => {
   const onCloseModal = () => {
     setOpenHasChangesModal(false);
   };
-  console.log(launchableApps)
   const storeSelectedApps = async () => {
-    const selectedAppDetails = launchableApps.filter(app => selected.has(app.packageName));
+    const selectedAppDetails = launchableApps.filter(app =>
+      selected.has(app.packageName),
+    );
     await Store.save(Store.KEY, Array.from(selectedAppDetails));
     navigation.navigate('Home', {
       refresh: true,

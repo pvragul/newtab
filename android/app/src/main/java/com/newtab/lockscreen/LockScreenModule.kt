@@ -5,7 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import com.facebook.react.bridge.*
 
-class ScreenLockerModule(reactContext: ReactApplicationContext) :
+class LockScreenModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
     override fun getName() = "ScreenLocker"

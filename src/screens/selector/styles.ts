@@ -18,7 +18,7 @@ const styleSheet = (theme: ITheme) =>
       justifyContent: 'space-between',
     },
     title: {
-      fontSize: 28,
+      fontSize: 20,
       fontWeight: '800',
       letterSpacing: 1.5,
       padding: 16,

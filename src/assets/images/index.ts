@@ -6,3 +6,5 @@ export { default as RearrangeIcon } from './rearrange_icon';
 export { default as UninstallIcon } from './uninstall';
 export { default as RemoveIcon } from './remove';
 export { default as InformationIcon } from './information';
+export { default as AllIcon } from './all_icon';
+export { default as HappyIcon } from './happy';

@@ -13,7 +13,7 @@ import { useTheme } from '../themes/ThemeContext';
 export type Position = 'left' | 'right' | 'center' | 'auto';
 
 const { width, height } = Dimensions.get('window');
-const SIDE_WIDTH = Math.min(width * 0.75, 320);
+const SIDE_WIDTH = Math.min(width * 0.60, 320);
 
 export default function CustomSlideModal({
   visible,

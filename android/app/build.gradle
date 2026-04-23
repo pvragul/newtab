@@ -82,8 +82,9 @@ android {
         applicationId "com.newtab"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode Integer.valueOf(VERSION_CODE)
+        versionName VERSION_NAME
+        
     }
     signingConfigs {
         debug {
@@ -103,6 +104,17 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def appName = "NewTab"
+            def versionName = variant.versionName
+            def versionCode = variant.versionCode
+            def buildType = variant.buildType.name
+
+            def newName = "${appName}-${buildType}-v${versionName}(${versionCode}).apk"
+            outputFileName = newName
         }
     }
 }

@@ -7,6 +7,8 @@ import {
   BackHandler,
   Image,
   Dimensions,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import styleSheet from './styles';
 import { useTheme } from '../../themes/ThemeContext';
@@ -18,28 +20,37 @@ import {
   UninstallIcon,
   InformationIcon,
   RemoveIcon,
+  AllIcon,
+  HappyIcon,
 } from '../../assets/images';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import CustomSlideModal from '../../components/customSlideModal';
 import { IAppDetail } from '../../interface';
 import Store from '../../store';
-import { useCustomNavigation, useCustomRoute } from '../../../navigation';
+import {
+  useCustomNavigation,
+  useCustomRoute,
+  RootStackParamList,
+} from '../../../navigation';
 import { useFocusEffect } from '@react-navigation/native';
 import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  GestureHandlerRootView,
+  FlatList as GestureFlatList,
+} from 'react-native-gesture-handler';
 import CustomButton from '../../components/customButton';
-const { SystemSettings, LauncherApps } = NativeModules;
+import { openApp, openAppInfo, uninstallApp } from '../../utils/common';
+const { SystemSettings, ScreenLocker } = NativeModules;
 
 const HomeScreen = () => {
   const { theme } = useTheme();
-  const [toggleMenu, setToggleMenu] = useState(false);
   const styles = styleSheet(theme);
-  const toggleMenuHandler = () => setToggleMenu(prev => !prev);
   const { width } = Dimensions.get('window');
-
   const navigation = useCustomNavigation();
+  const [userName, setUserName] = useState('');
+  const [openNameInput, setOpenNameInput] = useState<boolean>(false);
   const route = useCustomRoute();
   const [appList, setAppList] = useState<IAppDetail[]>([]);
   const [enableReorder, setEnableReorder] = useState(false);
@@ -47,8 +58,23 @@ const HomeScreen = () => {
   const [showAppIcon, setShowAppIcon] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [selectedApp, setSelectedApp] = useState<IAppDetail | null>(null);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
+  const listRef = useRef<GestureFlatList<IAppDetail>>(null);
+  const [selectedAppForMenu, setSelectedAppForMenu] =
+    useState<IAppDetail | null>(null);
+
+  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
+    const checkBatteryOptimizationIgnored = async () => {
+      const isBatteryOptimizationIgnored =
+        await SystemSettings.isBatteryOptimizationIgnored();
+      if (!isBatteryOptimizationIgnored) {
+        await SystemSettings.requestDisableBatteryOptimization();
+      }
+    };
+    checkBatteryOptimizationIgnored();
+
     const checkIsDefault = async () => {
       const isDefaultLauncher = await SystemSettings.isDefaultLauncher();
       setIsDefault(isDefaultLauncher);
@@ -56,17 +82,22 @@ const HomeScreen = () => {
     checkIsDefault();
   }, []);
 
-  const openSystemThemeSettings = () => {
-    if (Platform.OS === 'android') {
-      SystemSettings.openDisplaySettings();
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({
+          offset: 0,
+          animated: false,
+        });
+      });
+    }, []),
+  );
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        if (toggleMenu) {
-          setToggleMenu(false);
+        if (selectedAppForMenu) {
+          setSelectedAppForMenu(null);
         }
         // Return true to prevent exiting the app on Home screen
         return true;
@@ -78,57 +109,82 @@ const HomeScreen = () => {
       );
 
       return () => subscription.remove();
-    }, [toggleMenu]),
+    }, [selectedAppForMenu]),
   );
 
   const loadApps = async () => {
-    {
-      let selectedAppsList = (await Store.get<IAppDetail[]>(Store.KEY)) || [];
-      setAppList(selectedAppsList);
+    let selectedAppsList = await Store.get<IAppDetail[]>(Store.KEY, []);
+    selectedAppsList = selectedAppsList.filter(item => !!item);
+    if (
+      selectedAppsList.length !== 0 &&
+      !selectedAppsList.some(item => item.packageName === 'allApps')
+    ) {
+      selectedAppsList.push({
+        name: 'All Apps',
+        packageName: 'allApps',
+        activityName: '',
+        iconUri: '',
+      });
     }
+    setAppList(selectedAppsList);
+    setIsFetching(false);
   };
+
   useEffect(() => {
+    setIsFetching(true);
     loadApps();
+    const checkIconEnabled = async () => {
+      const isEnabled = await Store.get(Store.SHOW_APP_ICON_KEY, true);
+      setShowAppIcon(isEnabled);
+    };
+    const checkUserName = async () => {
+      const storedUserName = await Store.get(Store.USER_NAME_KEY, '');
+      const trimmedUserName = storedUserName.trim();
+      setUserName(trimmedUserName);
+      setOpenNameInput(!trimmedUserName);
+    };
+    checkIconEnabled();
+    checkUserName();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      if (route.params?.refresh) {
+      const routeParams = route.params as RootStackParamList['Home'];
+      if (routeParams?.refresh) {
         loadApps();
       }
-    }, [route.params?.ts]),
+    }, [route.params]),
   );
-  const openSetDefaultSettings = async () => {
-    if (Platform.OS === 'android') {
-      await SystemSettings.openDefaultLauncherSettings();
-    }
-  };
-  const openApp = async (app: IAppDetail) => {
-    try {
-      await LauncherApps.openApp(
-        app.packageName,
-        app.activityName, // optional
-      );
-    } catch (e: any) {
-      console.warn('Failed to open app', e);
-      setError(e.message);
-    }
-  };
 
-  const openAppInfo = async (app: IAppDetail) => {
-    try {
-      await LauncherApps.openAppInfo(app.packageName);
-    } catch (e: any) {
-      console.warn('Failed to open app info', e);
-      setError(e.message);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-  const uninstallApp = async (app: IAppDetail) => {
+      const syncUserName = async () => {
+        const storedUserName = await Store.get(Store.USER_NAME_KEY, '');
+        const trimmedUserName = storedUserName.trim();
+
+        if (!isActive) {
+          return;
+        }
+
+        setUserName(trimmedUserName);
+        setOpenNameInput(!trimmedUserName);
+      };
+
+      syncUserName();
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
+
+  const lockScreen = async () => {
     try {
-      await LauncherApps.uninstallApp(app.packageName);
+      await ScreenLocker.lockScreen();
     } catch (e: any) {
-      console.warn('Failed to uninstall app', e);
+      console.warn('Failed to lock screen', e);
       setError(e.message);
     }
   };
@@ -139,46 +195,85 @@ const HomeScreen = () => {
     setAppList(filteredApps);
     await Store.save(Store.KEY, filteredApps);
   };
-  const renderItem = ({
-    item,
-    drag,
-    isActive,
-    getIndex,
-  }: RenderItemParams<IAppDetail>) => {
-    const [menuVisible, setMenuVisible] = useState(false);
-    const itemRef = useRef<View>(null);
 
+  const getGreeting = (date: Date) => {
+    const hour = date.getHours();
+    if (hour < 6) {
+      return 'Good Early Morning';
+    } else if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 18) {
+      return 'Good Afternoon';
+    } else if (hour < 22) {
+      return 'Good Evening';
+    } else {
+      return 'Good Night';
+    }
+  };
+
+  useEffect(() => {
+    const currentTime = new Date();
+    const greeting = getGreeting(currentTime);
+    setGreeting(greeting);
+    const interval = setInterval(() => {
+      const currentTime = new Date();
+      const greeting = getGreeting(currentTime);
+      setGreeting(greeting);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const RenderItem = ({ item, drag }: RenderItemParams<IAppDetail>) => {
     const openMenu = () => {
       setEnableReorder(true);
-      setMenuVisible(true);
+      setSelectedAppForMenu(item);
     };
+    const lastTap = useRef(0);
+
+    const handleTap = () => {
+      const now = Date.now();
+      const DOUBLE_PRESS_DELAY = 250;
+
+      if (lastTap.current && now - lastTap.current < DOUBLE_PRESS_DELAY) {
+        console.log('Double tap detected');
+        lockScreen(); // native call
+      } else {
+        if (enableReorder) {
+          setEnableReorder(false);
+          setSelectedAppForMenu(null);
+        } else {
+          item.packageName === 'allApps'
+            ? navigation.navigate('AllApps')
+            : openApp(item, setError);
+          setSelectedAppForMenu(null);
+        }
+      }
+
+      lastTap.current = now;
+    };
+
     return (
       <Pressable
         key={item?.packageName}
         style={[
           styles.appContainer,
-          selectedApp?.packageName === item.packageName && styles.appContainerSelected,
+          selectedApp?.packageName === item.packageName &&
+            styles.appContainerSelected,
         ]}
         onPress={() => {
-          if (enableReorder) {
-            setEnableReorder(false);
-            setMenuVisible(false);
-          } else {
-            openApp(item);
-            setMenuVisible(false);
-          }
+          setSelectedAppForMenu(null);
+          handleTap();
         }}
         onLongPress={() => {
-          if (menuVisible) {
-            setMenuVisible(false);
+          if (selectedAppForMenu) {
+            setSelectedAppForMenu(null);
           } else {
             openMenu();
           }
         }}
       >
         <View
-          ref={itemRef}
-          key={item?.packageName}
+          key={item?.packageName + '_container'}
           style={[styles.appContainer, styles.flexRow]}
         >
           <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
@@ -187,7 +282,7 @@ const HomeScreen = () => {
                 style={styles.moreButton}
                 onLongPress={() => {
                   setEnableReorder(true);
-                  setMenuVisible(false);
+                  setSelectedAppForMenu(null);
                   setSelectedApp(item);
                   drag();
                 }}
@@ -199,9 +294,9 @@ const HomeScreen = () => {
                 />
               </Pressable>
             )}
-            {showAppIcon && (
+            {showAppIcon && item.name !== 'All Apps' && (
               <Image
-                key={item?.packageName}
+                key={item?.packageName + '_icon'}
                 source={{ uri: item?.iconUri }}
                 style={{
                   width: 24,
@@ -210,29 +305,43 @@ const HomeScreen = () => {
                 }}
               />
             )}
-            <Text style={styles.appName}>{item?.name}</Text>
+            {showAppIcon && item.name === 'All Apps' && (
+              <View style={{ opacity: enableReorder ? 0.2 : 1 }}>
+                <AllIcon width={24} height={24} fill={theme.textPrimary} />
+              </View>
+            )}
+            <Text
+              style={[
+                styles.appName,
+                { paddingLeft: enableReorder && !showAppIcon ? 30 : 0 },
+              ]}
+            >
+              {item?.name}
+            </Text>
           </View>
-          {menuVisible && (
-            <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
-              <Pressable onPress={() => openAppInfo(item)}>
-                <InformationIcon
-                  width={15}
-                  height={15}
-                  fill={theme.textPrimary}
-                />
-              </Pressable>
-              <Pressable onPress={() => handleRemoveFromHome(item)}>
-                <RemoveIcon width={15} height={15} fill={theme.textPrimary} />
-              </Pressable>
-              <Pressable onPress={() => uninstallApp(item)}>
-                <UninstallIcon
-                  width={15}
-                  height={15}
-                  fill={theme.textPrimary}
-                />
-              </Pressable>
-            </View>
-          )}
+          {selectedAppForMenu &&
+            selectedAppForMenu.packageName === item.packageName &&
+            item.name !== 'All Apps' && (
+              <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
+                <Pressable onPress={() => openAppInfo(item, setError)}>
+                  <InformationIcon
+                    width={15}
+                    height={15}
+                    fill={theme.textPrimary}
+                  />
+                </Pressable>
+                <Pressable onPress={() => handleRemoveFromHome(item)}>
+                  <RemoveIcon width={15} height={15} fill={theme.textPrimary} />
+                </Pressable>
+                <Pressable onPress={() => uninstallApp(item, setError)}>
+                  <UninstallIcon
+                    width={15}
+                    height={15}
+                    fill={theme.textPrimary}
+                  />
+                </Pressable>
+              </View>
+            )}
         </View>
       </Pressable>
     );
@@ -245,86 +354,72 @@ const HomeScreen = () => {
           style={styles.menuButton}
           onPress={() => navigation.navigate('AppSelector')}
         >
-          <AddIcon
-            width={24}
-            height={24}
-            fill={!toggleMenu ? styles.title.color : 'none'}
-          />
+          <AddIcon width={24} height={24} fill={theme.textPrimary} />
         </Pressable>
         <Pressable
           style={styles.menuButton}
           onPress={() => {
-            !toggleMenu && toggleMenuHandler();
+            navigation.navigate('Settings', {
+              isDefault: isDefault,
+            });
           }}
         >
-          <SettingsIcon
-            width={24}
-            height={24}
-            fill={!toggleMenu ? styles.title.color : 'none'}
-          />
+          <SettingsIcon width={24} height={24} fill={theme.textPrimary} />
         </Pressable>
       </View>
       <View style={[styles.logoContainer]}>
-        <AppLogo width={100} height={100} />
         <View>
-          <Text style={styles.title}>New Tab</Text>
-          <Text style={styles.subtitle}>Start clean. Stay focused.</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={styles.greetings}>{greeting}</Text>
+            <HappyIcon width={20} height={20} fill={theme.textPrimary} />
+          </View>
+          <Text
+            style={[
+              styles.greetings,
+              { fontSize: 24, color: theme.textPrimary },
+            ]}
+          >
+            {userName}
+          </Text>
+          {/* <Text style={styles.subtitle}>Start clean. Stay focused.</Text> */}
         </View>
       </View>
-      {/* <FlatList
-        data={appList}
-        renderItem={renderItem}
-        style={styles.appListContainer}
-      /> */}
+
+      {isFetching && (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={theme.textPrimary} />
+        </View>
+      )}
+
+      {!isFetching && appList.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No apps selected</Text>
+          <CustomButton
+            title="Select apps"
+            variants="secondary"
+            onPress={() => navigation.navigate('AppSelector')}
+          />
+        </View>
+      )}
+
       {appList.length > 0 && (
         <GestureHandlerRootView>
           <DraggableFlatList
+            ref={listRef}
             style={[styles.appListContainer, { width }]}
             data={appList}
             keyExtractor={item => item.packageName}
-            renderItem={renderItem}
+            renderItem={RenderItem}
             onDragEnd={({ data }) => {
-              setAppList(data);
               setEnableReorder(false);
               setSelectedApp(null);
               (async () => await Store.save(Store.KEY, data))();
+              loadApps();
             }}
           />
         </GestureHandlerRootView>
       )}
-      <CustomSlideModal
-        key="settings"
-        visible={toggleMenu}
-        onClose={toggleMenuHandler}
-        position="right"
-      >
-        <View style={[styles.menuContainer]}>
-          <Text style={styles.menuTitle}>Settings</Text>
-          <Pressable
-            style={styles.menuItem}
-            disabled={isDefault}
-            onPress={openSetDefaultSettings}
-          >
-            <Text style={styles.menuItemText}>
-              {isDefault ? 'Default Launcher' : 'Set as Default'}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={styles.menuItem}
-            onPress={() => setShowAppIcon(!showAppIcon)}
-          >
-            <Text style={styles.menuItemText}>
-              {showAppIcon ? 'Hide App Icon' : 'Show App Icon'}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Change Wallpaper</Text>
-          </Pressable>
-          <Pressable style={styles.menuItem} onPress={openSystemThemeSettings}>
-            <Text style={styles.menuItemText}>Change Theme</Text>
-          </Pressable>
-        </View>
-      </CustomSlideModal>
+
       <CustomSlideModal
         key="default"
         visible={isDefault === false}
@@ -337,8 +432,8 @@ const HomeScreen = () => {
               title="Cancel"
             />
             <CustomButton
-              onPress={openSetDefaultSettings}
               variants={'tertiary'}
+              // onPress={openSetDefaultSettings}
               title="Set as Default"
             />
           </View>
@@ -389,11 +484,75 @@ const HomeScreen = () => {
           }}
         >
           <Text
-            style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}
+            style={{
+              fontWeight: 'bold',
+              fontSize: 16,
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
           >
             Error
           </Text>
-          <Text style={{ textAlign: 'center' }}>{error}</Text>
+          <Text style={{ textAlign: 'center', color: theme.textPrimary }}>
+            {error}
+          </Text>
+        </View>
+      </CustomSlideModal>
+
+      <CustomSlideModal
+        key="username"
+        visible={openNameInput}
+        position="center"
+        footer={
+          <View style={{ alignItems: 'center', width: '100%' }}>
+            <CustomButton
+              onPress={async () => {
+                await Store.save(Store.USER_NAME_KEY, userName.trim());
+                setOpenNameInput(false);
+              }}
+              disabled={!(userName.trim().length > 2)}
+              variants={'secondary'}
+              title="Save"
+            />
+          </View>
+        }
+      >
+        <View
+          style={{
+            alignItems: 'center',
+            gap: 10,
+            flexDirection: 'column',
+          }}
+        >
+          <Text
+            style={{
+              fontWeight: 'bold',
+              fontSize: 16,
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
+          >
+            What's your name?
+          </Text>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
+          >
+            Please enter your name to personalize your experience
+          </Text>
+          <TextInput
+            style={{
+              width: '100%',
+              borderColor: 'gray',
+              borderWidth: 1,
+              borderRadius: 5,
+              color: theme.textPrimary,
+            }}
+            value={userName}
+            onChangeText={setUserName}
+          />
         </View>
       </CustomSlideModal>
     </View>

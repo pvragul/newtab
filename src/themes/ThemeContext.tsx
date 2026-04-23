@@ -7,9 +7,11 @@ type Theme = typeof LightTheme;
 const ThemeContext = createContext<{
   theme: Theme;
   toggleTheme: () => void;
+  isDark: boolean;
 }>({
   theme: LightTheme,
   toggleTheme: () => {},
+  isDark: false,
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -29,7 +31,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   const theme = isDark ? DarkTheme : LightTheme;
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, isDark }}>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={theme.background}

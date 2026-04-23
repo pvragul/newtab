@@ -12,90 +12,26 @@ const styleSheet = (theme: ITheme) =>
       height: '100%',
       margin: 0,
       padding: 16,
+      gap: 10,
     },
-    logoContainer: {
-      flexDirection: 'row',
+    header: {
+      width: '100%',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-    },
-    greetings: {
-      fontSize: 16,
-      fontWeight: '600',
-      letterSpacing: 1.5,
-      color: theme.textPrimary,
-    },
-    subtitle: {
-      marginTop: 8,
-      fontSize: 14,
-      color: theme.textPrimary, // neutral gray
-      letterSpacing: 0.5,
-    },
-    menuButton: {
-      zIndex: 1,
-      borderColor: theme.textPrimary,
-    },
-    topMenuContainer: {
-      display: 'flex',
-      width: '100%',
       flexDirection: 'row',
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      gap: 16,
-    },
-    menuContainer: {
-      width: '100%',
-      height: '100%',
-      color: theme.textPrimary,
-      gap: 8,
       justifyContent: 'space-between',
     },
-    menuModel: {
-      flex: 1,
-      alignItems: 'center',
-      padding: 0,
-    },
-    menuTitle: {
-      fontSize: 18,
+    title: {
+      fontSize: 20,
       fontWeight: '800',
       letterSpacing: 1.5,
-      color: theme.textPrimary,
-    },
-    menuItem: {
-      color: theme.textPrimary,
-      width: '100%',
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-    },
-    menuItemText: {
-      fontSize: 14,
-      color: theme.textPrimary,
-    },
-    emptyContainer: {
-      flex: 1,
-      height: '100%',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      left: 0,
-      bottom: 0,
-      zIndex: 10,
-    },
-    emptyText: {
-      fontSize: 16,
+      paddingHorizontal: 12,
       color: theme.textPrimary,
     },
     appListContainer: {
       flex: 1,
       width: '100%',
-      padding: 8,
-      margin: 0,
+      padding:8,
+      margin: 0
     },
     appContainer: {
       flex: 1,
@@ -105,7 +41,7 @@ const styleSheet = (theme: ITheme) =>
       padding: 8,
       gap: 10,
       color: theme.textPrimary,
-      position: 'relative',
+      position: 'relative'
     },
     appContainerSelected: {
       borderColor: theme.textPrimary,
@@ -116,12 +52,12 @@ const styleSheet = (theme: ITheme) =>
       color: theme.textPrimary,
     },
     appContextMenu: {
-      position: 'absolute',
+      position: 'absolute'
     },
     moreButton: {
       position: 'absolute',
       left: 5,
-      zIndex: 10,
+      zIndex: 10
     },
     alignCenter: {
       alignItems: 'center',
@@ -170,7 +106,7 @@ const styleSheet = (theme: ITheme) =>
     contextMenuItemText: {
       fontSize: 12,
       color: theme.textPrimary,
-    },
+    }
   });
 
 export default styleSheet;

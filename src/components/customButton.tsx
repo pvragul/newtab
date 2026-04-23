@@ -22,7 +22,7 @@ const CustomButton = ({
   const styles = styleSheet(theme);
   return (
     <Pressable
-      style={[styles.root, styles[variants]]}
+      style={[styles.root, styles[variants], disabled && styles.disabled]}
       onPress={onPress}
       disabled={disabled}
     >
@@ -37,7 +37,6 @@ const styleSheet = (theme: ITheme) =>
   StyleSheet.create({
     root: {
       padding: 10,
-      flex: 1,
       alignItems: 'center',
       borderRadius: 16,
       borderWidth: 2,
@@ -65,5 +64,8 @@ const styleSheet = (theme: ITheme) =>
     tertiary: {
       backgroundColor: theme.background,
       borderColor: theme.background,
+    },
+    disabled: {
+      opacity: 0.5,
     },
   });

@@ -8,6 +8,7 @@ import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.newtab.launcher.LauncherAppsPackage
 import com.newtab.system.SystemSettingsPackage
+import com.newtab.lockscreen.LockScreenPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -18,6 +19,7 @@ class MainApplication : Application(), ReactApplication {
         PackageList(this).packages.apply {
           add(SystemSettingsPackage())
           add(LauncherAppsPackage())
+          add(LockScreenPackage())
         },
     )
   }
