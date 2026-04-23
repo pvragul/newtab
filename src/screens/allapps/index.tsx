@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   NativeModules,
@@ -29,6 +30,7 @@ const { width } = Dimensions.get('window');
 const AllApps = () => {
   const { theme } = useTheme();
   const styles = styleSheet(theme);
+  const [loading, setLoading] = useState<boolean>(true);
   const [launchableApps, setlaunchableApps] = useState<IAppDetail[]>([]);
   const [error, setError] = useState<string>('');
   const [selectedAppsList, setSelectedAppsList] = useState<Set<string>>(
@@ -37,6 +39,10 @@ const AllApps = () => {
   const navigation = useCustomNavigation();
   const listRef = useRef<FlatList>(null);
   const [success, setSuccess] = useState<string>('');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<IAppDetail | null>(null);
+  const [search, setSearch] = useState('');
+  const [limit, setLimit] = useState(20);
   const initialSelectedRef = useRef<Set<string>>(new Set());
   const loadSelectedPkgs = async () => {
     const data = await Store.get<IAppDetail[]>(Store.KEY, []);
@@ -48,16 +54,15 @@ const AllApps = () => {
     initialSelectedRef.current = initial;
     return;
   };
-
   const handleSearch = (text: string) => {
     setSearch(text);
+    setLimit(20);
   };
-
   const loadAppsList = async () => {
     try {
+      setLoading(true);
       await loadSelectedPkgs();
       let appsList = await LauncherApps.getLaunchableApps();
-      console.log(appsList?.length);
       //remove duplicates
       appsList = appsList?.filter(
         (app: IAppDetail, index: number) =>
@@ -67,6 +72,8 @@ const AllApps = () => {
       setlaunchableApps(appsList);
     } catch (error: any) {
       setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,10 +91,6 @@ const AllApps = () => {
       });
     }, []),
   );
-  const [menuVisible, setMenuVisible] = useState(false);
-
-  const [selectedApp, setSelectedApp] = useState<IAppDetail | null>(null);
-  const [search, setSearch] = useState('');
 
   const handleLinkApp = async (appDetail: IAppDetail) => {
     const isSelected = selectedAppsList.has(appDetail.packageName);
@@ -118,11 +121,22 @@ const AllApps = () => {
     }, 1000);
   };
   const filteredAppsList = useMemo(() => {
+    if (loading) return [];
     if (!search) return launchableApps;
     return launchableApps.filter((app: IAppDetail) => {
       return app.name.toLowerCase().includes(search.toLowerCase());
     });
-  }, [launchableApps, search]);
+  }, [launchableApps, search, loading]);
+
+  const displayedAppsList = useMemo(() => {
+    return filteredAppsList.slice(0, limit);
+  }, [filteredAppsList, limit]);
+
+  const loadMoreApps = useCallback(() => {
+    if (limit < filteredAppsList.length) {
+      setLimit(prevLimit => prevLimit + 20);
+    }
+  }, [limit, filteredAppsList.length]);
 
   const renderApps = useCallback(
     ({ item }: any = {}) => {
@@ -221,15 +235,25 @@ const AllApps = () => {
         </Pressable>
       </View>
       <SearchInput onSearch={handleSearch} />
-      <GestureHandlerRootView>
-        <FlatList
-          ref={listRef}
-          style={[styles.appListContainer, { width }]}
-          data={filteredAppsList}
-          renderItem={renderApps}
-          keyExtractor={item => item.packageName}
-        />
-      </GestureHandlerRootView>
+      {loading && (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={theme.textPrimary} />
+        </View>
+      )}
+      {!loading && (
+        <GestureHandlerRootView>
+          <FlatList
+            ref={listRef}
+            style={[styles.appListContainer, { width }]}
+            data={displayedAppsList}
+            renderItem={renderApps}
+            keyExtractor={item => item.packageName}
+            onEndReached={loadMoreApps}
+            onEndReachedThreshold={0.5}
+            initialNumToRender={20}
+          />
+        </GestureHandlerRootView>
+      )}
       <CustomSlideModal
         key="error"
         visible={!!error}

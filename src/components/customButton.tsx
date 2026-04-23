@@ -14,7 +14,7 @@ const CustomButton = ({
   disabled,
 }: {
   title: string;
-  variants: 'primary' | 'secondary' | 'tertiary';
+  variants: 'primary' | 'secondary' | 'tertiary' | 'danger';
   onPress?: ((event: GestureResponderEvent) => void) | undefined;
   disabled?: boolean;
 }) => {
@@ -53,6 +53,10 @@ const styleSheet = (theme: ITheme) =>
       color: theme.textPrimary,
       fontWeight: 'bold',
     },
+    danger_text: {
+      color: theme.textPrimary,
+      fontWeight: 'bold',
+    },
     primary: {
       backgroundColor: theme.background,
       borderColor: theme.background,
@@ -64,6 +68,10 @@ const styleSheet = (theme: ITheme) =>
     tertiary: {
       backgroundColor: theme.background,
       borderColor: theme.background,
+    },
+    danger: {
+      backgroundColor: '#f26767',
+      borderColor: '#f26767',
     },
     disabled: {
       opacity: 0.5,

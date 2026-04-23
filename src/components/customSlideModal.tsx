@@ -166,8 +166,6 @@ const styleSheet = (theme: ITheme) =>
     auto: {},
     footer: {
       paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderTopWidth: 2,
-      borderTopColor: theme.background,
+      paddingVertical: 16,
     },
   });

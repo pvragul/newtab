@@ -29,9 +29,11 @@ const SettingsScreen = () => {
   const route = useCustomRoute();
   const { isDefault = false } = route.params as RootStackParamList['Settings'];
   const [enableShowAppIcon, setEnableShowAppIcon] = useState(true);
+  const [enableDoubleTapLock, setEnableDoubleTapLock] = useState(false);
   const [userName, setUserName] = useState('');
   const [openNameEditor, setOpenNameEditor] = useState(false);
-
+  const [openRemoveAllDialog, setOpenRemoveAllDialog] = useState(false);
+  const [openDoubleTapLockDialog, setOpenDoubleTapLockDialog] = useState(false);
   const version = DeviceInfo.getVersion();
   const buildNumber = DeviceInfo.getBuildNumber();
 
@@ -43,6 +45,9 @@ const SettingsScreen = () => {
 
   useEffect(() => {
     Store.get(Store.SHOW_APP_ICON_KEY, true).then(setEnableShowAppIcon);
+    Store.get(Store.ENABLE_DOUBLE_TAP_LOCK_KEY, false).then(
+      setEnableDoubleTapLock,
+    );
     Store.get(Store.USER_NAME_KEY, '').then((storedUserName: string) => {
       setUserName(storedUserName.trim());
     });
@@ -51,6 +56,10 @@ const SettingsScreen = () => {
   useEffect(() => {
     Store.save(Store.SHOW_APP_ICON_KEY, enableShowAppIcon);
   }, [enableShowAppIcon]);
+
+  useEffect(() => {
+    Store.save(Store.ENABLE_DOUBLE_TAP_LOCK_KEY, enableDoubleTapLock);
+  }, [enableDoubleTapLock]);
 
   const openSystemThemeSettings = () => {
     if (Platform.OS === 'android') {
@@ -113,6 +122,18 @@ const SettingsScreen = () => {
         />
       </View>
       <View style={styles.switchContainer}>
+        <Text style={styles.text}>Double Tap to Lock</Text>
+        <Switch
+          trackColor={{ false: '#767577', true: '#81b0ff' }}
+          thumbColor={'#f4f3f4'}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={() => {
+            setOpenDoubleTapLockDialog(true);
+          }}
+          value={enableDoubleTapLock}
+        />
+      </View>
+      <View style={styles.switchContainer}>
         <Text style={styles.text}>Dark Mode</Text>
         <Switch
           trackColor={{ false: '#767577', true: '#81b0ff' }}
@@ -128,7 +149,7 @@ const SettingsScreen = () => {
         <Text style={styles.text}>Remove All Apps</Text>
         <Pressable
           onPress={async () => {
-            await Store.save(Store.KEY, []);
+            setOpenRemoveAllDialog(true);
           }}
         >
           <View
@@ -226,6 +247,97 @@ const SettingsScreen = () => {
             placeholderTextColor={theme.textSecondary}
             autoFocus
           />
+        </View>
+      </CustomSlideModal>
+      <CustomSlideModal
+        visible={openRemoveAllDialog}
+        onClose={() => setOpenRemoveAllDialog(false)}
+        position="center"
+        footer={
+          <View style={{ alignItems: 'center', width: '100%' }}>
+            <CustomButton
+              onPress={async () => {
+                await Store.save(Store.KEY, []);
+                setOpenRemoveAllDialog(false);
+              }}
+              variants="danger"
+              title="Remove All"
+            />
+          </View>
+        }
+      >
+        <View
+          style={{
+            alignItems: 'center',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontWeight: 'bold',
+              fontSize: 18,
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
+          >
+            Remove all apps
+          </Text>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
+          >
+            Are you sure you want to remove all apps?
+          </Text>
+        </View>
+      </CustomSlideModal>
+      <CustomSlideModal
+        visible={openDoubleTapLockDialog}
+        onClose={() => setOpenDoubleTapLockDialog(false)}
+        position="center"
+        footer={
+          <View style={{ alignItems: 'center', width: '100%' }}>
+            <CustomButton
+              onPress={async () => {
+                setOpenDoubleTapLockDialog(false);
+                setEnableDoubleTapLock(prev => !prev);
+              }}
+              variants="secondary"
+              title="Done"
+            />
+          </View>
+        }
+      >
+        <View
+          style={{
+            alignItems: 'center',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontWeight: 'bold',
+              fontSize: 18,
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
+          >
+            Double tap to lock
+          </Text>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: theme.textPrimary,
+            }}
+          >
+            Are you sure you want to{' '}
+            {enableDoubleTapLock ? 'disable' : 'enable'} this feature?{`\n`}
+            If {enableDoubleTapLock ? 'disabled' : 'enabled'}, double tap on any
+            app home screen will lock the phone.
+          </Text>
         </View>
       </CustomSlideModal>
     </View>

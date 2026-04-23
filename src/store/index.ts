@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEY = 'SELECTED_APPS';
 const SHOW_APP_ICON_KEY = 'SHOW_APP_ICON';
 const USER_NAME_KEY = 'USER_NAME';
+const ENABLE_DOUBLE_TAP_LOCK_KEY = 'ENABLE_DOUBLE_TAP_LOCK';
 
 async function save<T>(key: string, packages: T) {
   await AsyncStorage.setItem(key, JSON.stringify(packages));
@@ -27,6 +28,7 @@ const Store = {
   KEY,
   SHOW_APP_ICON_KEY,
   USER_NAME_KEY,
+  ENABLE_DOUBLE_TAP_LOCK_KEY,
   save,
   get,
   clear,

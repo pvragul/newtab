@@ -106,7 +106,24 @@ const styleSheet = (theme: ITheme) =>
     contextMenuItemText: {
       fontSize: 12,
       color: theme.textPrimary,
-    }
+    },
+    emptyContainer: {
+      flex: 1,
+      height: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      left: 0,
+      bottom: 0,
+      zIndex: 10,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
   });
 
 export default styleSheet;

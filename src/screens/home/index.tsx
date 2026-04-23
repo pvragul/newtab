@@ -56,6 +56,8 @@ const HomeScreen = () => {
   const [enableReorder, setEnableReorder] = useState(false);
   const [isDefault, setIsDefault] = useState<boolean | null>(null);
   const [showAppIcon, setShowAppIcon] = useState<boolean>(true);
+  const [enableDoubleTapLock, setEnableDoubleTapLock] =
+    useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [selectedApp, setSelectedApp] = useState<IAppDetail | null>(null);
   const [isFetching, setIsFetching] = useState<boolean>(false);
@@ -93,6 +95,12 @@ const HomeScreen = () => {
     }, []),
   );
 
+  if (listRef) {
+    console.log('----------------------------------------------');
+    console.log('listRef', listRef);
+    console.log('----------------------------------------------');
+    console.log('listRefz', listRef?.current);
+  }
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
@@ -113,6 +121,7 @@ const HomeScreen = () => {
   );
 
   const loadApps = async () => {
+    setIsFetching(true);
     let selectedAppsList = await Store.get<IAppDetail[]>(Store.KEY, []);
     selectedAppsList = selectedAppsList.filter(item => !!item);
     if (
@@ -131,11 +140,15 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    setIsFetching(true);
     loadApps();
     const checkIconEnabled = async () => {
       const isEnabled = await Store.get(Store.SHOW_APP_ICON_KEY, true);
       setShowAppIcon(isEnabled);
+      const isLockEnabled = await Store.get(
+        Store.ENABLE_DOUBLE_TAP_LOCK_KEY,
+        false,
+      );
+      setEnableDoubleTapLock(isLockEnabled);
     };
     const checkUserName = async () => {
       const storedUserName = await Store.get(Store.USER_NAME_KEY, '');
@@ -152,6 +165,10 @@ const HomeScreen = () => {
       const routeParams = route.params as RootStackParamList['Home'];
       if (routeParams?.refresh) {
         loadApps();
+        Store.get(Store.SHOW_APP_ICON_KEY, true).then(setShowAppIcon);
+        Store.get(Store.ENABLE_DOUBLE_TAP_LOCK_KEY, false).then(
+          setEnableDoubleTapLock,
+        );
       }
     }, [route.params]),
   );
@@ -229,14 +246,31 @@ const HomeScreen = () => {
       setSelectedAppForMenu(item);
     };
     const lastTap = useRef(0);
+    const tapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleTap = () => {
       const now = Date.now();
       const DOUBLE_PRESS_DELAY = 250;
 
-      if (lastTap.current && now - lastTap.current < DOUBLE_PRESS_DELAY) {
-        console.log('Double tap detected');
-        lockScreen(); // native call
+      if (enableDoubleTapLock) {
+        if (lastTap.current && now - lastTap.current < DOUBLE_PRESS_DELAY) {
+          if (tapTimeout.current) clearTimeout(tapTimeout.current);
+          console.log('Double tap detected');
+          lockScreen();
+        } else {
+          if (enableReorder) {
+            setEnableReorder(false);
+            setSelectedAppForMenu(null);
+          } else {
+            tapTimeout.current = setTimeout(() => {
+              item.packageName === 'allApps'
+                ? navigation.navigate('AllApps')
+                : openApp(item, setError);
+              setSelectedAppForMenu(null);
+            }, DOUBLE_PRESS_DELAY);
+          }
+        }
+        lastTap.current = now;
       } else {
         if (enableReorder) {
           setEnableReorder(false);
@@ -248,8 +282,6 @@ const HomeScreen = () => {
           setSelectedAppForMenu(null);
         }
       }
-
-      lastTap.current = now;
     };
 
     return (
@@ -370,7 +402,7 @@ const HomeScreen = () => {
       <View style={[styles.logoContainer]}>
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Text style={styles.greetings}>{greeting}</Text>
+            <Text style={styles.greetings}>{greeting}!</Text>
             <HappyIcon width={20} height={20} fill={theme.textPrimary} />
           </View>
           <Text
