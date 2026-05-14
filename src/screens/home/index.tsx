@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   TextInput,
+  AppState,
 } from 'react-native';
 import styleSheet from './styles';
 import { useTheme } from '../../themes/ThemeContext';
@@ -31,7 +32,7 @@ import {
   useCustomNavigation,
   useCustomRoute,
   RootStackParamList,
-} from '../../../navigation';
+} from '../../navigation/types';
 import { useFocusEffect } from '@react-navigation/native';
 import DraggableFlatList, {
   RenderItemParams,
@@ -42,7 +43,7 @@ import {
 } from 'react-native-gesture-handler';
 import CustomButton from '../../components/customButton';
 import { openApp, openAppInfo, uninstallApp } from '../../utils/common';
-const { SystemSettings, ScreenLocker } = NativeModules;
+const { SystemSettings, ScreenLocker, LauncherApps } = NativeModules;
 
 const HomeScreen = () => {
   const { theme } = useTheme();
@@ -64,8 +65,11 @@ const HomeScreen = () => {
   const listRef = useRef<GestureFlatList<IAppDetail>>(null);
   const [selectedAppForMenu, setSelectedAppForMenu] =
     useState<IAppDetail | null>(null);
-
   const [greeting, setGreeting] = useState('');
+  const [timeEmoji, setTimeEmoji] = useState('☀️');
+  const [mood, setMood] = useState('😊');
+
+  const moods = ['😊', '🎯', '🚀', '😌', '😴', '🧠', '✨', '🔥'];
 
   useEffect(() => {
     const checkBatteryOptimizationIgnored = async () => {
@@ -95,12 +99,6 @@ const HomeScreen = () => {
     }, []),
   );
 
-  if (listRef) {
-    console.log('----------------------------------------------');
-    console.log('listRef', listRef);
-    console.log('----------------------------------------------');
-    console.log('listRefz', listRef?.current);
-  }
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
@@ -158,6 +156,27 @@ const HomeScreen = () => {
     };
     checkIconEnabled();
     checkUserName();
+
+    const subscription = AppState.addEventListener(
+      'change',
+      async nextAppState => {
+        if (nextAppState === 'active') {
+          setSelectedAppForMenu(null);
+          const existingAppList = await Store.get<IAppDetail[]>(Store.KEY, []);
+          let appsList = await LauncherApps.getLaunchableApps();
+          const filteredAppsList = existingAppList.filter(
+            app =>
+              app.packageName === 'allApps' ||
+              appsList.some((a: any) => a.packageName === app.packageName),
+          );
+          await Store.save(Store.KEY, filteredAppsList);
+          await loadApps();
+        }
+      },
+    );
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   useFocusEffect(
@@ -171,6 +190,15 @@ const HomeScreen = () => {
         );
       }
     }, [route.params]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const onFocus = async () => {
+        await loadApps();
+      };
+      onFocus();
+    }, []),
   );
 
   useFocusEffect(
@@ -196,6 +224,23 @@ const HomeScreen = () => {
       };
     }, []),
   );
+
+  const getTimeEmoji = (date: Date) => {
+    const hour = date.getHours();
+    if (hour < 6) return '🌙'; // Early Morning
+    if (hour < 12) return '☀️'; // Morning
+    if (hour < 18) return '🌤️'; // Afternoon
+    if (hour < 22) return '🌆'; // Evening
+    return '🌙'; // Night
+  };
+
+  const cycleMood = async () => {
+    const currentIndex = moods.indexOf(mood);
+    const nextIndex = (currentIndex + 1) % moods.length;
+    const nextMood = moods[nextIndex];
+    setMood(nextMood);
+    await Store.save('USER_MOOD', nextMood);
+  };
 
   const lockScreen = async () => {
     try {
@@ -229,14 +274,21 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    const currentTime = new Date();
-    const greeting = getGreeting(currentTime);
-    setGreeting(greeting);
-    const interval = setInterval(() => {
+    const updateGreeting = () => {
       const currentTime = new Date();
-      const greeting = getGreeting(currentTime);
-      setGreeting(greeting);
-    }, 60000);
+      setGreeting(getGreeting(currentTime));
+      setTimeEmoji(getTimeEmoji(currentTime));
+    };
+
+    const loadMood = async () => {
+      const storedMood = await Store.get('USER_MOOD', '😊');
+      setMood(storedMood);
+    };
+
+    updateGreeting();
+    loadMood();
+
+    const interval = setInterval(updateGreeting, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -247,6 +299,10 @@ const HomeScreen = () => {
     };
     const lastTap = useRef(0);
     const tapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleUninstall = async (item: IAppDetail) => {
+      await uninstallApp(item, setError);
+    };
 
     const handleTap = () => {
       const now = Date.now();
@@ -304,77 +360,71 @@ const HomeScreen = () => {
           }
         }}
       >
-        <View
-          key={item?.packageName + '_container'}
-          style={[styles.appContainer, styles.flexRow]}
-        >
-          <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
-            {enableReorder && (
-              <Pressable
-                style={styles.moreButton}
-                onLongPress={() => {
-                  setEnableReorder(true);
-                  setSelectedAppForMenu(null);
-                  setSelectedApp(item);
-                  drag();
-                }}
-              >
-                <RearrangeIcon
-                  width={15}
-                  height={15}
+        <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
+          {enableReorder && (
+            <Pressable
+              style={styles.moreButton}
+              onLongPress={() => {
+                setEnableReorder(true);
+                setSelectedAppForMenu(null);
+                setSelectedApp(item);
+                drag();
+              }}
+            >
+              <RearrangeIcon width={15} height={15} fill={theme.textPrimary} />
+            </Pressable>
+          )}
+          {showAppIcon && item.name !== 'All Apps' && (
+            <Image
+              key={item?.packageName + '_icon'}
+              source={{ uri: item?.iconUri }}
+              style={{
+                width: 24,
+                height: 24,
+                opacity: enableReorder ? 0.2 : 1,
+              }}
+            />
+          )}
+          {showAppIcon && item.name === 'All Apps' && (
+            <View style={{ opacity: enableReorder ? 0.2 : 1 }}>
+              <AllIcon width={24} height={24} fill={theme.textPrimary} />
+            </View>
+          )}
+          <Text
+            style={[
+              styles.appName,
+              { paddingLeft: enableReorder && !showAppIcon ? 30 : 0 },
+            ]}
+          >
+            {item?.name}
+          </Text>
+        </View>
+        {selectedAppForMenu &&
+          selectedAppForMenu.packageName === item.packageName &&
+          item.name !== 'All Apps' && (
+            <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
+              <Pressable onPress={() => openAppInfo(item, setError)}>
+                <InformationIcon
+                  width={20}
+                  height={20}
                   fill={theme.textPrimary}
                 />
               </Pressable>
-            )}
-            {showAppIcon && item.name !== 'All Apps' && (
-              <Image
-                key={item?.packageName + '_icon'}
-                source={{ uri: item?.iconUri }}
-                style={{
-                  width: 24,
-                  height: 24,
-                  opacity: enableReorder ? 0.2 : 1,
-                }}
-              />
-            )}
-            {showAppIcon && item.name === 'All Apps' && (
-              <View style={{ opacity: enableReorder ? 0.2 : 1 }}>
-                <AllIcon width={24} height={24} fill={theme.textPrimary} />
-              </View>
-            )}
-            <Text
-              style={[
-                styles.appName,
-                { paddingLeft: enableReorder && !showAppIcon ? 30 : 0 },
-              ]}
-            >
-              {item?.name}
-            </Text>
-          </View>
-          {selectedAppForMenu &&
-            selectedAppForMenu.packageName === item.packageName &&
-            item.name !== 'All Apps' && (
-              <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
-                <Pressable onPress={() => openAppInfo(item, setError)}>
-                  <InformationIcon
-                    width={15}
-                    height={15}
-                    fill={theme.textPrimary}
-                  />
-                </Pressable>
-                <Pressable onPress={() => handleRemoveFromHome(item)}>
-                  <RemoveIcon width={15} height={15} fill={theme.textPrimary} />
-                </Pressable>
-                <Pressable onPress={() => uninstallApp(item, setError)}>
-                  <UninstallIcon
-                    width={15}
-                    height={15}
-                    fill={theme.textPrimary}
-                  />
-                </Pressable>
-              </View>
-            )}
-        </View>
+              <Pressable onPress={() => handleRemoveFromHome(item)}>
+                <RemoveIcon width={20} height={20} fill={theme.textPrimary} />
+              </Pressable>
+              {!item.isSystemApp &&
+                item.installer === 'com.android.vending' && (
+                  <Pressable onPress={() => handleUninstall(item)}>
+                    <UninstallIcon
+                      width={20}
+                      height={20}
+                      fill={theme.textPrimary}
+                    />
+                  </Pressable>
+                )}
+            </View>
+          )}
       </Pressable>
     );
   };
@@ -402,8 +452,12 @@ const HomeScreen = () => {
       <View style={[styles.logoContainer]}>
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Text style={styles.greetings}>{greeting}!</Text>
-            <HappyIcon width={20} height={20} fill={theme.textPrimary} />
+            <Text style={styles.greetings}>
+              {timeEmoji} {greeting}!
+            </Text>
+            <Pressable onPress={cycleMood} hitSlop={10}>
+              <Text style={{ fontSize: 22 }}>{mood}</Text>
+            </Pressable>
           </View>
           <Text
             style={[

@@ -17,6 +17,9 @@ export interface IAppDetail {
   iconUri?: string;
   activityName?: string;
   order?: number;
+  isSystemApp?: boolean;
+  isUpdatedSystemApp?: boolean;
+  installer?: string | null;
 }
 
 export type AppDetail = IAppDetail;

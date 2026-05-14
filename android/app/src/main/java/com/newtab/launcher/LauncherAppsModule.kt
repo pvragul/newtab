@@ -2,6 +2,7 @@ package com.newtab.launcher
 
 import android.content.Intent
 import android.content.ComponentName
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
@@ -35,12 +36,20 @@ class LauncherAppsModule(
         .map { resolveInfo ->
           val appInfo = resolveInfo.activityInfo.applicationInfo
           val packageName = appInfo.packageName
-
+          val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+          val isUpdatedSystemApp = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
           Arguments.createMap().apply {
             putString("name", pm.getApplicationLabel(appInfo).toString())
             putString("packageName", packageName)
             putString("activityName", resolveInfo.activityInfo.name)
             putString("iconUri", getCachedIconUri(packageName))
+            putBoolean("isSystemApp", isSystemApp)
+            putBoolean("isUpdatedSystemApp", isUpdatedSystemApp)
+            putString("installer", try {
+                    pm.getInstallerPackageName(appInfo.packageName)
+                } catch (e: Exception) {
+                    null
+                })
           }
         }
         .sortedBy { it.getString("name") }
@@ -90,19 +99,6 @@ class LauncherAppsModule(
     return Uri.fromFile(iconFile).toString()
   }
 
-  /**
-   * Exposed method to fetch icon URI individually (optional)
-   */
-  @ReactMethod
-  fun getAppIconUri(packageName: String, promise: Promise) {
-    try {
-      promise.resolve(getCachedIconUri(packageName))
-    } catch (e: PackageManager.NameNotFoundException) {
-      promise.reject("ICON_NOT_FOUND", "App icon not found")
-    } catch (e: Exception) {
-      promise.reject("ICON_ERROR", e)
-    }
-  }
   @ReactMethod
   fun openApp(packageName: String, activityName: String?, promise: Promise) {
     try {
@@ -127,25 +123,6 @@ class LauncherAppsModule(
 
     } catch (e: Exception) {
       promise.reject("OPEN_APP_ERROR", e.message, e)
-    }
-  }
-
-  @ReactMethod
-  fun getAppMeta(packageName: String, promise: Promise) {
-    try {
-      val pm = reactApplicationContext.packageManager
-      val appInfo = pm.getApplicationInfo(packageName, 0)
-      val name = pm.getApplicationLabel(appInfo).toString()
-      val iconUri = getCachedIconUri(packageName)
-
-      val map = Arguments.createMap()
-      map.putString("packageName", packageName)
-      map.putString("name", name)
-      map.putString("icon", iconUri)
-
-      promise.resolve(map)
-    } catch (e: Exception) {
-      promise.reject("APP_NOT_FOUND", e)
     }
   }
 

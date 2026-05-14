@@ -16,7 +16,7 @@ import {
   RootStackParamList,
   useCustomNavigation,
   useCustomRoute,
-} from '../../../navigation';
+} from '../../navigation/types';
 import CustomSlideModal from '../../components/customSlideModal';
 const { LauncherApps } = NativeModules;
 
@@ -103,10 +103,10 @@ const AppSelector = () => {
     setOpenHasChangesModal(false);
   };
   const storeSelectedApps = async () => {
-    const selectedAppDetails = launchableApps.filter(app =>
-      selected.has(app.packageName),
-    );
-    await Store.save(Store.KEY, Array.from(selectedAppDetails));
+    const selectedAppDetails = Array.from(selected)
+      .map(key => launchableApps.find(item => item.packageName === key))
+      .filter(Boolean);
+    await Store.save(Store.KEY, selectedAppDetails);
     navigation.navigate('Home', {
       refresh: true,
       ts: Date.now(),

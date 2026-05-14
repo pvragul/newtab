@@ -8,10 +8,11 @@
 *   **Launchable App Details**: Access a complete list of all installed launchable applications on your device via the `All Apps` screen. View crucial app details, inspect System App Info, or directly uninstall apps right from the launcher.
 *   **Drag-and-Drop Organization**: Easily re-order your selected apps on the home screen using intuitive drag-and-drop gestures.
 *   **Double-Tap to Lock**: Instantly turn off and lock your device display with a quick double-tap on any empty space or app element.
-*   **Personalized Greeting**: Dynamic, time-based greetings (e.g., "Good Morning", "Good Evening") paired with your personalized username.
+*   **Dynamic Greeting & Interactive Mood**: Time-sensitive greetings (e.g., "Good Morning") paired with dynamic emojis (☀️, 🌙) and an interactive, persistent mood selector (😊, 🎯, 🚀).
+*   **Smart App Syncing**: Automatically detects and removes uninstalled apps from your home screen whenever the launcher becomes active, ensuring your dashboard stays clean and valid.
 *   **Theme & Icon Toggles**: Fully supports Light and Dark modes. Further reduce distractions by hiding application icons entirely for a text-only interface.
 *   **Glassmorphism UI**: Beautiful, lightweight, frosted-glass inspired modals and contextual menus without relying on heavy native blur libraries.
-*   **Home Intent Deep Linking**: Fully intercepts Android physical Home button presses, routing seamlessly back to the minimalist dashboard via deep links.
+*   **Home Intent & Standard Launching**: Fully intercepts Android physical Home button presses and supports standard LAUNCHER intents for maximum compatibility.
 
 ## 📱 Usage
 
@@ -73,4 +74,4 @@ This project is licensed under the MIT License.
 This app is a work in progress. Any suggestions are welcome.
 
 ## App apk for testing
-[NewTab.apk](https://drive.google.com/file/d/1Em94cJm1n6VXwuH_mOZ-LXSHJNrbFpqM/view?usp=drive_link&export=download)
+[NewTab.apk](https://drive.usercontent.google.com/download?id=1Em94cJm1n6VXwuH_mOZ-LXSHJNrbFpqM&export=download&authuser=0)

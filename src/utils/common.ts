@@ -1,7 +1,7 @@
 import { NativeModules } from 'react-native';
 import { IAppDetail } from '../interface';
 
-const { SystemSettings, LauncherApps, ScreenLocker } = NativeModules;
+const { LauncherApps } = NativeModules;
 export const openApp = async (
   app: IAppDetail,
   setError: React.Dispatch<React.SetStateAction<string>>,

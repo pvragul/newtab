@@ -6,6 +6,7 @@ import {
   Pressable,
   Text,
   View,
+  AppState,
 } from 'react-native';
 import styleSheet from './styles';
 import { useTheme } from '../../themes/ThemeContext';
@@ -19,11 +20,12 @@ import {
   RootStackParamList,
   useCustomNavigation,
   useCustomRoute,
-} from '../../../navigation';
+} from '../../navigation/types';
 import { useFocusEffect } from '@react-navigation/native';
 import LinkIcon from '../../assets/images/link_icon';
 import Store from '../../store';
 import SearchInput from '../../components/SearchInput';
+import CustomButton from '../../components/customButton';
 const { LauncherApps } = NativeModules;
 const { width } = Dimensions.get('window');
 
@@ -79,6 +81,32 @@ const AllApps = () => {
 
   useEffect(() => {
     loadAppsList();
+    const subscription = AppState.addEventListener(
+      'change',
+      async nextAppState => {
+        if (nextAppState === 'active') {
+          setMenuVisible(false);
+          setSelectedApp(null);
+          await loadAppsList();
+          const updatedList = Array.from(selectedAppsList)
+            .map(key => {
+              const app = launchableApps.find(
+                (app: IAppDetail) => app.packageName === key,
+              );
+              return app;
+            })
+            .filter(Boolean);
+          await Store.save(Store.KEY, updatedList);
+          initialSelectedRef.current = selectedAppsList;
+          setSelectedAppsList(
+            new Set(updatedList.map(item => item?.packageName || '')),
+          );
+        }
+      },
+    );
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   useFocusEffect(
@@ -118,7 +146,7 @@ const AllApps = () => {
     );
     setTimeout(() => {
       setSuccess('');
-    }, 1000);
+    }, 2000);
   };
   const filteredAppsList = useMemo(() => {
     if (loading) return [];
@@ -139,7 +167,7 @@ const AllApps = () => {
   }, [limit, filteredAppsList.length]);
 
   const renderApps = useCallback(
-    ({ item }: any = {}) => {
+    ({ item }: { item: IAppDetail }) => {
       const isSelected = selectedAppsList.has(item.packageName);
       return (
         <Pressable
@@ -170,8 +198,8 @@ const AllApps = () => {
                 key={item?.packageName + '_icon'}
                 source={{ uri: item?.iconUri }}
                 style={{
-                  width: 24,
-                  height: 24,
+                  width: 30,
+                  height: 30,
                 }}
               />
               <Text style={styles.appName}>{item?.name}</Text>
@@ -182,33 +210,36 @@ const AllApps = () => {
                 <View style={[styles.flexRow, styles.alignCenter, { gap: 10 }]}>
                   <Pressable onPress={() => openAppInfo(item, setError)}>
                     <InformationIcon
-                      width={15}
-                      height={15}
+                      width={20}
+                      height={20}
                       fill={theme.textPrimary}
                     />
                   </Pressable>
                   <Pressable onPress={() => handleLinkApp(item)}>
                     {!isSelected ? (
                       <LinkIcon
-                        width={15}
-                        height={15}
+                        width={20}
+                        height={20}
                         fill={theme.textPrimary}
                       />
                     ) : (
                       <RemoveIcon
-                        width={15}
-                        height={15}
+                        width={20}
+                        height={20}
                         fill={theme.textPrimary}
                       />
                     )}
                   </Pressable>
-                  <Pressable onPress={() => uninstallApp(item, setError)}>
-                    <UninstallIcon
-                      width={15}
-                      height={15}
-                      fill={theme.textPrimary}
-                    />
-                  </Pressable>
+                  {!item.isSystemApp &&
+                    item.installer === 'com.android.vending' && (
+                      <Pressable onPress={() => uninstallApp(item, setError)}>
+                        <UninstallIcon
+                          width={20}
+                          height={20}
+                          fill={theme.textPrimary}
+                        />
+                      </Pressable>
+                    )}
                 </View>
               )}
           </View>
@@ -251,6 +282,7 @@ const AllApps = () => {
             onEndReached={loadMoreApps}
             onEndReachedThreshold={0.5}
             initialNumToRender={20}
+            keyboardShouldPersistTaps="always"
           />
         </GestureHandlerRootView>
       )}

@@ -39,6 +39,7 @@ export default function CustomSlideModal({
   const opacity = useRef(new Animated.Value(0)).current;
 
   const getInitialValue = () => {
+    // align animation based on position center, left, right
     if (position === 'left') return -SIDE_WIDTH;
     if (position === 'right') return SIDE_WIDTH;
     if (position === 'center') return height;
@@ -83,6 +84,7 @@ export default function CustomSlideModal({
   if (!showModal) return null;
 
   const getTransformStyle = () => {
+    // align animation based on position center, left, right
     if (position === 'center') return { transform: [{ translateY: translate }] };
     if (position === 'left' || position === 'right') return { transform: [{ translateX: translate }] };
     return {};
@@ -122,9 +124,9 @@ const styleSheet = (theme: ITheme) =>
       zIndex: 99,
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      // ...StyleSheet.absoluteFillObject,
       flex: 1,
-      // backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dim the background further for more contrast
+      backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dim the background further for more contrast
     },
     panel: {
       position: 'absolute',
@@ -166,6 +168,6 @@ const styleSheet = (theme: ITheme) =>
     auto: {},
     footer: {
       paddingHorizontal: 16,
-      paddingVertical: 16,
+      paddingBottom: 16,
     },
   });

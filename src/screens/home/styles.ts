@@ -101,18 +101,20 @@ const styleSheet = (theme: ITheme) =>
       flex: 1,
       alignItems: 'center',
       justifyContent: 'space-between',
+      flexDirection: 'row',
       width: '100%',
-      padding: 8,
-      gap: 10,
+      padding: 14,
+      gap: 12,
       color: theme.textPrimary,
       position: 'relative',
+      // height: 42,
     },
     appContainerSelected: {
       borderColor: theme.textPrimary,
       borderWidth: 1,
     },
     appName: {
-      fontSize: 14,
+      fontSize: 16,
       color: theme.textPrimary,
     },
     appContextMenu: {

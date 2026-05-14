@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">NewTab</string>
+    <string name="accessibility_description">Used to lock the screen without disabling biometrics (Fingerprint/Face unlock).</string>
 </resources>

@@ -13,19 +13,10 @@ import AppSelector from './src/screens/selector';
 import AllApps from './src/screens/allapps';
 import SettingsScreen from './src/screens/settings';
 
-export type RootStackParamList = {
-  Home: { refresh: boolean; ts: number };
-  AppSelector: undefined;
-  AllApps: undefined;
-  Settings: {
-    isDefault: boolean | null;
-  };
-};
+import { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-export const useCustomNavigation = useNavigation<NavigationProp>;
-export const useCustomRoute = useRoute<RouteProp<RootStackParamList>>;
+
 const linking = {
   prefixes: ['newtab://'],
   config: {

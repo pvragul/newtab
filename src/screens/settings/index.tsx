@@ -13,14 +13,14 @@ import {
   RootStackParamList,
   useCustomNavigation,
   useCustomRoute,
-} from '../../../navigation';
+} from '../../navigation/types';
 import { useEffect, useState } from 'react';
 import Store from '../../store';
 import DeviceInfo from 'react-native-device-info';
 import { CloseIcon, RemoveIcon } from '../../assets';
 import CustomButton from '../../components/customButton';
 import CustomSlideModal from '../../components/customSlideModal';
-const { SystemSettings } = NativeModules;
+const { SystemSettings, ScreenLocker } = NativeModules;
 
 const SettingsScreen = () => {
   const { theme, isDark } = useTheme();
@@ -30,6 +30,7 @@ const SettingsScreen = () => {
   const { isDefault = false } = route.params as RootStackParamList['Settings'];
   const [enableShowAppIcon, setEnableShowAppIcon] = useState(true);
   const [enableDoubleTapLock, setEnableDoubleTapLock] = useState(false);
+  const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false);
   const [userName, setUserName] = useState('');
   const [openNameEditor, setOpenNameEditor] = useState(false);
   const [openRemoveAllDialog, setOpenRemoveAllDialog] = useState(false);
@@ -48,6 +49,11 @@ const SettingsScreen = () => {
     Store.get(Store.ENABLE_DOUBLE_TAP_LOCK_KEY, false).then(
       setEnableDoubleTapLock,
     );
+    if (Platform.OS === 'android') {
+      ScreenLocker.isAccessibilityServiceEnabled().then(
+        setIsAccessibilityEnabled,
+      );
+    }
     Store.get(Store.USER_NAME_KEY, '').then((storedUserName: string) => {
       setUserName(storedUserName.trim());
     });
@@ -64,6 +70,12 @@ const SettingsScreen = () => {
   const openSystemThemeSettings = () => {
     if (Platform.OS === 'android') {
       SystemSettings.openDisplaySettings();
+    }
+  };
+
+  const openAccessibilitySettings = () => {
+    if (Platform.OS === 'android') {
+      ScreenLocker.openAccessibilitySettings();
     }
   };
 
@@ -110,6 +122,18 @@ const SettingsScreen = () => {
         />
       </View>
       <View style={styles.switchContainer}>
+        <Text style={styles.text}>Dark Mode</Text>
+        <Switch
+          trackColor={{ false: '#767577', true: '#81b0ff' }}
+          thumbColor={'#f4f3f4'}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={() => {
+            openSystemThemeSettings();
+          }}
+          value={isDark}
+        />
+      </View>
+      <View style={styles.switchContainer}>
         <Text style={styles.text}>Show App Icon</Text>
         <Switch
           trackColor={{ false: '#767577', true: '#81b0ff' }}
@@ -133,18 +157,21 @@ const SettingsScreen = () => {
           value={enableDoubleTapLock}
         />
       </View>
-      <View style={styles.switchContainer}>
-        <Text style={styles.text}>Dark Mode</Text>
-        <Switch
-          trackColor={{ false: '#767577', true: '#81b0ff' }}
-          thumbColor={'#f4f3f4'}
-          ios_backgroundColor="#3e3e3e"
-          onValueChange={() => {
-            openSystemThemeSettings();
-          }}
-          value={isDark}
-        />
-      </View>
+      {enableDoubleTapLock && (
+        <View style={styles.switchContainer}>
+          <Text style={styles.text}>Biometric Unlock Support</Text>
+          <Switch
+            trackColor={{ false: '#767577', true: '#81b0ff' }}
+            thumbColor={'#f4f3f4'}
+            ios_backgroundColor="#3e3e3e"
+            onValueChange={() => {
+              openAccessibilitySettings();
+            }}
+            value={isAccessibilityEnabled}
+          />
+        </View>
+      )}
+
       <View style={styles.switchContainer}>
         <Text style={styles.text}>Remove All Apps</Text>
         <Pressable
