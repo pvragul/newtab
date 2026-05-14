@@ -7,9 +7,10 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "release:patch": "node increment-version.js && cd android && gradlew assembleRelease",
-    "release:minor": "node increment-version.js --minor && cd android && gradlew assembleRelease",
-    "release:major": "node increment-version.js --major && cd android && gradlew assembleRelease"
+    "android:release": "cd android && ./gradlew assembleRelease",
+    "release:patch": "node increment-version.js && npm run android:release",
+    "release:minor": "node increment-version.js --minor && npm run android:release",
+    "release:major": "node increment-version.js --major && npm run android:release"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
