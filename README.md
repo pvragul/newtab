@@ -73,5 +73,5 @@ This project is licensed under the MIT License.
 ## 💬 Final Thought
 This app is a work in progress. Any suggestions are welcome.
 
-## App apk for testing
-[NewTab.apk](https://drive.usercontent.google.com/download?id=1Em94cJm1n6VXwuH_mOZ-LXSHJNrbFpqM&export=download&authuser=0)
+## 🚀 Release
+[Release](https://github.com/pvragul/newtab/releases)
